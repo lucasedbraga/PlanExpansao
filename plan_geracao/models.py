@@ -49,6 +49,26 @@ class PlanGer_Estatico:
         return results
 
 
+    def custo_ambiental(self):
+        pass
+
+
+    def energia_n_suprida(self):
+        pass
+
+
+    def restricao_reserva_confiabilidade(self):
+        pass
+
+    def restricao_decisao(self):
+        pass
+
+    def restricao_combustivel(self):
+        pass
+
+    def FOB(self,cinv):
+        pass
+
     def solve(self, details=False):
         cinv = self.custo_objetivo(self.model, self.data, details=details)
         self.FOB = cinv
