@@ -81,13 +81,46 @@ class PlanGer_Estatico:
 
         return custo_comb
 
+    def custo_oem(self, model, data, details=False):
+        # Declarando Variáveis
+        pot_despachada = {'leve': [], 'media': [], 'pesada': []}
+        duracao_patamar = {'leve': [], 'media': [], 'pesada': []}
+        custo_variavel = []
+        custo_fixo = []
+        name_usi = []
+        Pg_lim = []
+        for usi in data:
+            for uni in range(int(usi.loc['novas'])):
+                name_usi.append(usi.loc['Tipo'][0])
+                pot_despachada['leve'].append(usi.loc['despacho_leve'])
+                duracao_patamar['leve'].append(usi.loc['duracao_leve'])
+                custo_variavel.append(usi.loc['OeM vari'])
+                custo_fixo.append(usi.loc['OeM fixo'])
+                Pg_lim.append(usi.loc['Capacidade'])
 
+        NVAR = len(name_usi)
+        # model.Pd = pyo.Var(range(NVAR), bounds=(0, None))
+        # Pd = model.Pd
+        # model.limites = pyo.ConstraintList()
+        custo_oem_var = []
+        for u in range(NVAR):
+            # for patamar in pot_despachada.keys():
+            #     custo = float(custo_combustivel[u])*float(pot_despachada[patamar][u])*float(duracao_patamar[patamar][u])
+            #     print(custo)
+            #     custo_comb.append(custo)
+            custo = float(custo_variavel[u])*float(pot_despachada['leve'][u])*float(duracao_patamar['leve'][u])
+            custo_oem_var.append(custo)
+
+        custo_fixo = [float(Pg_lim[u]) * float(custo_fixo[u]) for u in range(NVAR)]
+
+        print(custo_fixo, len(custo_fixo))
+        print(custo_oem_var, len(custo_variavel))
 
 
     def solve(self, details=False):
         #cinv = self.custo_investimento(self.model, self.data, details=details)
-        ccomb = self.custo_combustivel(self.model, self.data, details=details)
-        print(ccomb)
+        #ccomb = self.custo_combustivel(self.model, self.data, details=details)
+        coem = self.custo_oem(self.model, self.data, details=details)
         #self.FOB = cinv
         #self.results = cinv
         #return self.results
