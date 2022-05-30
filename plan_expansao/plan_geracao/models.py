@@ -2,7 +2,6 @@ import pandas as pd
 from utils import Editor as edit
 import data_usi
 import pyomo.environ as pyo
-from pyomo.environ import *
 from pyomo.opt import SolverFactory
 
 class PlanGer_Estatico:
@@ -66,7 +65,7 @@ class PlanGer_Estatico:
     def restricao_combustivel(self):
         pass
 
-    def FOB(self,cinv):
+    def FOB(self, cinv):
         pass
 
     def solve(self, details=False):
