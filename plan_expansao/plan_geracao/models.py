@@ -8,8 +8,7 @@ from utils import Editor as edit
 
 class PlanGer_Estatico:
     def __init__(self):
-        self.model_candidatas = pyo.ConcreteModel()
-        self.model_avaliacao = pyo.ConcreteModel()
+        self.model = pyo.ConcreteModel()
         self.data = data_usi.gerate_data()
         self.limite_emissao = 1000
         self.demanda_ponta = 1200
@@ -17,44 +16,26 @@ class PlanGer_Estatico:
         self.limite_lolp = 2
         edit.titulo('Planejamento da Geração - Estático')
 
-    def custo_investimento(self, model, data, details=False):
+    def custo_investimento(self, data, details=False):
         Pg_lim = []
-        uc_inv = []
-        name_usi = []
-        model.candidatas = pyo.VarList(domain=pyo.Integers, bounds=(0, 1))
-        list_candidatas = model.candidatas
+        self.uc_inv = []
+        self.name_usi = []
+        self.model.candidatas = pyo.VarList(domain=pyo.Integers, bounds=(0, 1))
+        self.list_candidatas = self.model.candidatas
         for usi in data:
             for uni in range(int(usi.loc['novas'])):
-                name_usi.append(usi.loc['Tipo'][0])
+                self.name_usi.append(usi.loc['Tipo'][0])
                 Pg_lim.append(usi.loc['Capacidade'])
-                uc_inv.append(usi.loc['Custo Investimento'])
-                model.candidatas.add()
-        NVAR = len(Pg_lim)
-        model.Pg = pyo.Var(range(NVAR), bounds=(0, None))
-        Pg = model.Pg
-        model.limites = pyo.ConstraintList()
-        for g in range(NVAR):
-            model.limites.add(expr=Pg[g] <= float(Pg_lim[g]))
-        model.balanco = pyo.Constraint(expr=sum([list_candidatas[g + 1] * Pg[g] for g in range(NVAR)]) == self.demanda_ponta)
-        # Função Objetivo
-        #TODO botar restrição de Decisão
-        model.fob = pyo.Objective(expr=sum([list_candidatas[g + 1] * Pg[g] * float(uc_inv[g]) for g in range(NVAR)]))
-        opt = SolverFactory('mindtpy')
-        opt.solve(model,  mip_solver='glpk', nlp_solver='ipopt')
-        results = [pyo.value(Pg[g]) for g in range(NVAR)]
-        construct = [pyo.value(list_candidatas[g]) for g in range(1, NVAR+1)]
-        self.geracao_candidata = results
-        edit.relatorio_titulo('CUSTO OBJETIVO ')
-        d = {'Usina': name_usi, 'Geração': np.array(results)*np.array(construct), 'Decisão': construct}
-        resultado = pd.DataFrame(d)
-        if details:
-            model.pprint()
-            edit.relatorio_titulo('CUSTO OBJETIVO ')
-            edit.relatorio_item(resultado)
-            edit.relatorio_end()
-            print(f'DEMANDA ATENDIDA={sum(resultado.Geração)} / DEMANDA SOLICIDATDA = {self.demanda_ponta}')
+                self.uc_inv.append(usi.loc['Custo Investimento'])
+                self.list_candidatas.add()
+        self.NVAR = len(Pg_lim)
+        self.model.Pg = pyo.Var(range(self.NVAR), bounds=(0, None))
+        self.Pg = self.model.Pg
+        self.model.limites = pyo.ConstraintList()
+        for g in range(self.NVAR):
+            self.model.limites.add(expr=self.Pg[g] <= float(Pg_lim[g]))
+        self.model.balanco = pyo.Constraint(expr=sum([self.list_candidatas[g + 1] * self.Pg[g] for g in range(self.NVAR)]) == self.demanda_ponta)
 
-        return results
 
     def custo_combustivel(self, model, data, details=False):
         # Declarando Variáveis
@@ -170,21 +151,32 @@ class PlanGer_Estatico:
                 edit.aviso(f'COMBUSTIVEL INSUFICIENTE PARA {name_usi[g]}')
             # model.r_limites_comb.add(expr=combustivel_utilizado[g] <= float(lim_combustivel[g]))
 
-    def FOB(self, cinv):
-        pass
+    def FOB(self, details):
+        self.model.fob = pyo.Objective(expr=sum([self.list_candidatas[g + 1] * self.Pg[g] * float(self.uc_inv[g]) for g in range(self.NVAR)]))
+        opt = SolverFactory('mindtpy')
+        opt.solve(self.model, mip_solver='glpk', nlp_solver='ipopt')
+        results = [pyo.value(self.Pg[g]) for g in range(self.NVAR)]
+        construct = [pyo.value(self.list_candidatas[g]) for g in range(1, self.NVAR + 1)]
+        self.geracao_candidata = results
+        edit.relatorio_titulo('CUSTO OBJETIVO ')
+        d = {'Usina': self.name_usi, 'Geração': np.array(results) * np.array(construct), 'Decisão': construct}
+        resultado = pd.DataFrame(d)
+        if details:
+            self.model.pprint()
+            edit.relatorio_titulo('CUSTO OBJETIVO ')
+            edit.relatorio_item(resultado)
+            edit.relatorio_end()
+            print(f'DEMANDA ATENDIDA={sum(resultado.Geração)} / DEMANDA SOLICIDATDA = {self.demanda_ponta}')
 
     def solve(self, details=True):
-        cinv = self.custo_investimento(self.model_candidatas, self.data, details=details)
-        # ccomb = self.custo_combustivel(self.model_candidatas, self.data, details=details)
-        # coem = self.custo_oem(self.model_candidatas, self.data, details=True)
-        # cam = self.custo_ambiental(self.model_candidatas, self.data, details=True)
-        # rrc = self.restricao_reserva_confiabilidade(self.model_avaliacao, self.data, details=True)
-        # rcomb = self.restricao_combustivel(self.model_avaliacao, self.data, details=True)
-        # self.model_candidatas.pprint()
-        # self.model_avaliacao.pprint()
-        # self.FOB = cinv
-        # self.results = cinv
-        # return self.results
+        cinv = self.custo_investimento(self.data, details=details)
+        ccomb = self.custo_combustivel(self.model, self.data, details=details)
+        coem = self.custo_oem(self.model, self.data, details=True)
+        cam = self.custo_ambiental(self.model, self.data, details=True)
+        #rrc = self.restricao_reserva_confiabilidade(self.model, self.data, details=True)
+        rcomb = self.restricao_combustivel(self.model, self.data, details=True)
+        self.FOB(details=True)
+
 
 
 if __name__ == '__main__':
