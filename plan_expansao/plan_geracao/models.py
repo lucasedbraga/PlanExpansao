@@ -11,7 +11,7 @@ class PlanGer_Estatico:
         self.model = pyo.ConcreteModel()
         self.data = data_usi.gerate_data()
         self.limite_emissao = 1000
-        self.demanda_ponta = 1200
+        self.demanda_ponta = 1000
         self.reserva_capacidade = 0.2
         self.limite_lolp = 2
         edit.titulo('Planejamento da Geração - Estático')
@@ -153,6 +153,7 @@ class PlanGer_Estatico:
 
     def FOB(self, details):
         self.model.fob = pyo.Objective(expr=sum([self.list_candidatas[g + 1] * self.Pg[g] * float(self.uc_inv[g]) for g in range(self.NVAR)]))
+        self.model.pprint()
         opt = SolverFactory('mindtpy')
         opt.solve(self.model, mip_solver='glpk', nlp_solver='ipopt')
         results = [pyo.value(self.Pg[g]) for g in range(self.NVAR)]
@@ -170,14 +171,14 @@ class PlanGer_Estatico:
 
     def solve(self, details=True):
         cinv = self.custo_investimento(self.data, details=details)
-        ccomb = self.custo_combustivel(self.model, self.data, details=details)
-        coem = self.custo_oem(self.model, self.data, details=True)
-        cam = self.custo_ambiental(self.model, self.data, details=True)
-        #rrc = self.restricao_reserva_confiabilidade(self.model, self.data, details=True)
-        rcomb = self.restricao_combustivel(self.model, self.data, details=True)
+        # ccomb = self.custo_combustivel(self.model, self.data, details=details)
+        # coem = self.custo_oem(self.model, self.data, details=True)
+        # cam = self.custo_ambiental(self.model, self.data, details=True)
+        # #rrc = self.restricao_reserva_confiabilidade(self.model, self.data, details=True)
+        # rcomb = self.restricao_combustivel(self.model, self.data, details=True)
         self.FOB(details=True)
 
 
 
 if __name__ == '__main__':
-    print(PlanGer_Estatico().solve())
+    PlanGer_Estatico().solve()
